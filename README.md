@@ -1,6 +1,6 @@
 <div align="center">
 
-<a href="https://ruvnet.github.io/dream-machine/" title="Open the live site — interactive 4D hero"><img src="docs/media/hero.jpg" alt="Dream Machine — one honest cycle, every single night" width="100%"></a>
+<a href="https://ruvnet.github.io/dream-machine/" title="Open the live site — interactive 4D hero"><img src="https://raw.githubusercontent.com/ruvnet/dream-machine/main/docs/media/hero.jpg" alt="Dream Machine — one honest cycle, every single night" width="100%"></a>
 
 # ☾ Dream Machine
 
@@ -45,7 +45,7 @@ engine and the differences into a `dream.config`.
 
 ## Software factory
 
-![Software factory: research, implement, measure, review and release](docs/media/software-factory.svg)
+![Software factory: research, implement, measure, review and release](https://raw.githubusercontent.com/ruvnet/dream-machine/main/docs/media/software-factory.svg)
 
 The factory adds bounded primary research intake, a compiled implementation contract,
 README and ADR generation, accessible animated SVG explainers, evidence checks, and
@@ -92,7 +92,7 @@ must be configured and verified before live releases.
 
 ## The nightly pipeline
 
-<div align="center"><a href="https://ruvnet.github.io/dream-machine/#pipeline" title="See it animate on the live site"><img src="docs/media/pipeline.jpg" alt="The 13-stage nightly pipeline, rendered as an orbital scrollytelling narrative" width="100%"></a></div>
+<div align="center"><a href="https://ruvnet.github.io/dream-machine/#pipeline" title="See it animate on the live site"><img src="https://raw.githubusercontent.com/ruvnet/dream-machine/main/docs/media/pipeline.jpg" alt="The 13-stage nightly pipeline, rendered as an orbital scrollytelling narrative" width="100%"></a></div>
 
 ```
 ledger → research → frozen hypothesis → concrete candidate → baseline
@@ -122,14 +122,14 @@ dream-machine tui --path docs/dream-cycle/LEDGER.md            # the dashboard, 
 
 ### The TUI
 
-<div align="center"><img src="docs/media/tui.svg" alt="dream-machine tui — the nightly dashboard" width="720"></div>
+<div align="center"><img src="https://raw.githubusercontent.com/ruvnet/dream-machine/main/docs/media/tui.svg" alt="dream-machine tui — the nightly dashboard" width="720"></div>
 
 ### The management console
 
 A browser dashboard renders the ledger as recent nights, verdict distribution,
 and per-night evidence — the same data the TUI shows.
 
-<div align="center"><a href="https://ruvnet.github.io/dream-machine/dashboard.html" title="Open the live management dashboard"><img src="docs/media/dashboard.jpg" alt="The Dream Machine management console" width="100%"></a></div>
+<div align="center"><a href="https://ruvnet.github.io/dream-machine/dashboard.html" title="Open the live management dashboard"><img src="https://raw.githubusercontent.com/ruvnet/dream-machine/main/docs/media/dashboard.jpg" alt="The Dream Machine management console" width="100%"></a></div>
 
 ## Schedule it — nightly, autonomous, always improving
 

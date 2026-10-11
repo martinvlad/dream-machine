@@ -1,6 +1,6 @@
 {
   "name": "dream-machine",
-  "version": "0.2.0-next.1",
+  "version": "0.2.0-next.2",
   "description": "The Dream Machine \u2014 a config-driven engine for nightly, cloud-scheduled, evidence-gated repository evolution. It never merges; a human does.",
   "type": "module",
   "license": "MIT",
