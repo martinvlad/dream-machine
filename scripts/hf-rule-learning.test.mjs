@@ -1,0 +1,17 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {learnWithHF} from './hf-rule-learning.mjs';
+const obs=[{state:{x:1},action:2,nextState:{x:3}},{state:{x:4},action:3,nextState:{x:7}}];
+const cfg={model:'Qwen/Qwen3-32B',provider:'cerebras',maxCostUsd:.05,inputUsdPerMillion:1,outputUsdPerMillion:1};
+const good={schemaVersion:1,candidateId:'test',rulebook:'Add action',program:[{op:'addAction',key:'x'}]};
+const response=c=>new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify(c)}}]}));
+test('missing credential performs no request',async()=>{const r=await learnWithHF(obs,cfg,{token:'',fetchImpl:()=>{throw Error('called')}});assert.equal(r.status,'blocked')});
+test('proposes valid rule without promotion and fixed endpoint',async()=>{const r=await learnWithHF(obs,cfg,{token:'test',fetchImpl:async(url,opts)=>{assert.equal(url,'https://router.huggingface.co/v1/chat/completions');assert.equal(opts.redirect,'error');assert.equal(JSON.parse(opts.body).messages.length,2);return response(good)}});assert.equal(r.status,'proposed');assert.equal(r.promotion,'requires_independent_evaluation');assert.ok(!JSON.stringify(r).includes('Bearer'))});
+test('training failure gets bounded repair',async()=>{let calls=0;const r=await learnWithHF(obs,cfg,{token:'test',fetchImpl:async()=>response(++calls===1?{...good,program:[{op:'set',key:'x',value:0}]}:good)});assert.equal(calls,2);assert.equal(r.status,'proposed')});
+test('budget exhaustion sends zero requests',async()=>{let calls=0;const r=await learnWithHF(obs,{...cfg,maxCostUsd:0},{token:'test',fetchImpl:async()=>{calls++;return response(good)}});assert.equal(calls,0);assert.equal(r.status,'fallback')});
+test('invalid operation falls back and redacts errors',async()=>{const r=await learnWithHF(obs,cfg,{token:'secret',fetchImpl:async()=>response({...good,program:[{op:'shell',key:'x'}]})});assert.equal(r.status,'fallback');assert.ok(!JSON.stringify(r).includes('secret'))});
+test('provider failure is bounded',async()=>{let calls=0;const r=await learnWithHF(obs,cfg,{token:'test',fetchImpl:async()=>{calls++;return new Response('',{status:429})}});assert.equal(calls,1);assert.equal(r.status,'fallback')});
+test('oversized output rejected',async()=>{const r=await learnWithHF(obs,cfg,{token:'test',fetchImpl:async()=>new Response('x'.repeat(65537))});assert.equal(r.status,'fallback')});
+test('automatic routing rejected',async()=>{await assert.rejects(learnWithHF(obs,{...cfg,provider:'auto'},{token:''}))});
+test('timeout aborts request and retains fallback',async()=>{const r=await learnWithHF(obs,{...cfg,timeoutMs:10},{token:'test',fetchImpl:(_url,{signal})=>new Promise((_resolve,reject)=>signal.addEventListener('abort',()=>reject(Error('secret provider detail'))))});assert.equal(r.status,'fallback');assert.ok(!JSON.stringify(r).includes('secret provider detail'))});
+test('malformed JSON rejected',async()=>{const r=await learnWithHF(obs,cfg,{token:'test',fetchImpl:async()=>new Response('{')});assert.equal(r.status,'fallback')});
