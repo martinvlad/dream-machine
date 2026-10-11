@@ -376,16 +376,31 @@ export function learningSignals(rows: LedgerRow[], opts: SignalOptions = {}): Le
   const zeroMergeStreak =
     prsInWindow.length > 0 && (!merged || prsInWindow.every((n) => !merged.has(n)));
 
-  // Duplicate directions: normalized finding text repeated >= 3 times, counting
-  // both merged ledger rows and (optionally) still-open PRs' pending findings.
+  // Duplicate directions: normalized finding text repeated >= 3 PRIOR NIGHTS,
+  // counting both merged ledger rows and (optionally) still-open PRs' pending
+  // findings. A night whose row was re-appended on its own date (e.g. once
+  // its real PR/issue number became known — observed on the real ledger:
+  // the 2026-08-28 "harden anchored replay JSON evidence" row landed 3
+  // times) must count as ONE night, not three, or a single re-appended
+  // night falsely crosses the "repeated in >= 3 prior nights, rotate away"
+  // threshold. Rows are deduped by (directionKey, date) before counting;
+  // pendingFindings carry no row date (they're still-open PRs, not merged
+  // nights) and are counted as-is, one occurrence each.
   const counts = new Map<string, number>();
-  const bumpDirection = (finding: string) => {
-    const key = directionKey(finding);
+  const bump = (key: string) => {
     if (!key) return;
     counts.set(key, (counts.get(key) ?? 0) + 1);
   };
-  for (const r of rows) bumpDirection(r.finding);
-  for (const f of opts.pendingFindings ?? []) bumpDirection(f);
+  const countedRowNights = new Set<string>(); // `${key}\u0000${date}`
+  for (const r of rows) {
+    const key = directionKey(r.finding);
+    if (!key) continue;
+    const nightKey = `${key}\u0000${r.date}`;
+    if (countedRowNights.has(nightKey)) continue;
+    countedRowNights.add(nightKey);
+    bump(key);
+  }
+  for (const f of opts.pendingFindings ?? []) bump(directionKey(f));
   const duplicateDirections = [...counts.entries()].filter(([, c]) => c >= 3).map(([k]) => k);
 
   // Low-score streak: last 3 scores all < 5.
