@@ -4,7 +4,7 @@ import {learnWithHF} from './hf-rule-learning.mjs';
 const obs=[{state:{x:1},action:2,nextState:{x:3}},{state:{x:4},action:3,nextState:{x:7}}];
 const cfg={model:'Qwen/Qwen3-32B',provider:'cerebras',maxCostUsd:.05,inputUsdPerMillion:1,outputUsdPerMillion:1};
 const good={schemaVersion:1,candidateId:'test',rulebook:'Add action',program:[{op:'addAction',key:'x'}]};
-const response=c=>new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify(c)}}]}));
+const response=c=>new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({program:c.program.map(o=>({...o,value:o.value??null,from:o.from??null}))})}}]}));
 test('missing credential performs no request',async()=>{const r=await learnWithHF(obs,cfg,{token:'',fetchImpl:()=>{throw Error('called')}});assert.equal(r.status,'blocked')});
 test('proposes valid rule without promotion and fixed endpoint',async()=>{const r=await learnWithHF(obs,cfg,{token:'test',fetchImpl:async(url,opts)=>{assert.equal(url,'https://router.huggingface.co/v1/chat/completions');assert.equal(opts.redirect,'error');assert.equal(JSON.parse(opts.body).messages.length,2);return response(good)}});assert.equal(r.status,'proposed');assert.equal(r.promotion,'requires_independent_evaluation');assert.ok(!JSON.stringify(r).includes('Bearer'))});
 test('training failure gets bounded repair',async()=>{let calls=0;const r=await learnWithHF(obs,cfg,{token:'test',fetchImpl:async()=>response(++calls===1?{...good,program:[{op:'set',key:'x',value:0}]}:good)});assert.equal(calls,2);assert.equal(r.status,'proposed')});
