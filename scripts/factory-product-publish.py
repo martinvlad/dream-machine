@@ -191,6 +191,7 @@ def publish(policy, data, expected, version, query=request, invoke=subprocess.ru
     if observed is not None and observed.get('dist', {}).get('integrity') != integrity:
         return {'status': 'REGISTRY_CONFLICT'}
     outcome = 'EXISTING'
+    npm_error_code = None
     if observed is None:
         npm = shutil.which('npm', path='/usr/local/bin:/usr/bin:/bin')
         if not npm:
@@ -206,14 +207,19 @@ def publish(policy, data, expected, version, query=request, invoke=subprocess.ru
             os.chmod(config, 0o600)
             env = {'PATH': '/usr/local/bin:/usr/bin:/bin', 'HOME': home, 'NPM_CONFIG_USERCONFIG': config, 'NPM_CONFIG_CACHE': os.path.join(home, 'cache'), 'NODE_AUTH_TOKEN': token, 'NPM_CONFIG_LOGS_MAX': '0'}
             try:
-                result = invoke([npm, 'publish', artifact, '--ignore-scripts', '--access', 'public', '--tag', 'next', '--registry', REGISTRY], cwd=home, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=120, check=False)
+                result = invoke([npm, 'publish', artifact, '--ignore-scripts', '--access', 'public', '--tag', 'next', '--registry', REGISTRY], cwd=home, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=120, check=False)
                 outcome = 'RETURNED_ZERO' if result.returncode == 0 else 'RETURNED_NONZERO'
+                stderr = result.stderr if isinstance(result.stderr, bytes) else b''
+                # Copy only a strict npm diagnostic enum, never bodies or messages.
+                codes = re.findall(rb'^npm error code ([A-Z][A-Z0-9_]{0,63})\r?$', stderr, re.MULTILINE)
+                if codes:
+                    npm_error_code = codes[0].decode('ascii')
             except subprocess.TimeoutExpired:
                 outcome = 'TIMEOUT'
             except OSError:
                 outcome = 'EXECUTION_ERROR'
     status = reconcile(policy['name'], version, integrity, query=query, sleep=sleep)
-    return {'status': status, 'publishOutcome': outcome, 'name': policy['name'], 'version': version, 'integrity': integrity, 'provenance': 'unsupported outside GitHub OIDC'}
+    return {'status': status, 'publishOutcome': outcome, 'npmErrorCode': npm_error_code, 'name': policy['name'], 'version': version, 'integrity': integrity, 'provenance': 'unsupported outside GitHub OIDC'}
 
 
 def main(args):
