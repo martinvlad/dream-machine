@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 
 test('product publisher enforces trusted policies and reconciles uncertain results offline', () => {
-const result = execFileSync('python3', ['-c', String.raw`
+const result = execFileSync('python3', ['-B', '-c', String.raw`
 import importlib.util, io, json, tarfile, hashlib, tempfile, os, subprocess, types
 spec=importlib.util.spec_from_file_location('p','scripts/factory-product-publish.py'); p=importlib.util.module_from_spec(spec); spec.loader.exec_module(p)
 def reject(fn):
