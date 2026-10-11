@@ -27,3 +27,17 @@ A host must still run independent baseline comparisons and safety checks before 
 The synthetic fixture test covers add, multiply and action-dependent transitions across five seeds per family, selecting the correct supplied hypothesis over a deliberately wrong alternative. It tests deterministic execution and selection, not autonomous hypothesis discovery. No ARC-AGI replication, general learning, action-efficiency gain, or end-to-end RSI result is claimed. Only integer dictionaries and scalar integer actions are supported. This implementation introduces no default nightly behavior or automatic promotion.
 
 Local benchmark on Node v24.19.0: 100 batches, each with 15 cells, two candidates, one observation and one probe per cell. All 1,500 synthetic selections were correct. Measured batch p50 was 2.17 ms and p95 6.43 ms. This includes fixture creation, validation and receipt generation on this host; it is not a production latency guarantee. Validation remains at each interpreter boundary; no cache or weakened checks were introduced for this small workload. Re-run `node scripts/benchmark-rule-learning.mjs` after building to measure your host.
+
+## Observation-only proposal agent
+
+`inferRuleCandidates(observations, options?)` now generates candidates rather than requiring a supplied correct program. This deterministic enumerative proposer sees only observed transitions. It searches single-target add, multiply, set, copy, action addition, and multiply-then-add templates over a bounded constant set (default integers -4 through 4). It returns `candidates`, `testedHypotheses`, `compatibleHypotheses`, and `searchComplete`. Multiple explanations can fit the same observations; all retained alternatives must face independent hidden evaluation. Empty candidates mean the finite search found no explanation, not that learning is impossible. `searchComplete: false` means the search budget or candidate retention cap prevented a complete result.
+
+Search is capped at 4,096 tested hypotheses (default 2,048), 16 retained candidates and 17 constants with absolute value at most 1,024. Observation replay stops at the first mismatch. It does not infer multi-target programs, loops, nonlinear arithmetic, general algorithms, or natural-language semantics. Caller options reject unknown fields, so a hidden-probe field cannot silently enter the proposal API. Deterministic candidate IDs are program hashes; `ruleHash(observations)` and `ruleHash(result)` can bind a private proposal transcript. Returned candidates do not retain observation references. The proposer is not an LLM and does not use model credentials.
+
+```ts
+import { inferRuleCandidates, evaluateRuleCandidates } from '@dream-machine/compile/rule-learning';
+const proposals = inferRuleCandidates(observed);
+if (!proposals.candidates.length) throw Error('No compatible finite rule');
+const receipts = evaluateRuleCandidates(proposals.candidates, observed, sealed);
+// Keep these receipts private; a trusted host decides promotion independently.
+```

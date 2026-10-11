@@ -98,3 +98,43 @@ export function verifyRuleReceipt(receipt: RuleReceipt, parents: RuleReceipt[] =
     return canonicalRuleJson(expected) === canonicalRuleJson(receipt);
   } catch { return false; }
 }
+
+export interface RuleInferenceOptions { constants?: number[]; maxHypotheses?: number; maxCandidates?: number }
+export interface RuleInferenceResult { candidates: RuleCandidate[]; testedHypotheses: number; compatibleHypotheses: number; searchComplete: boolean }
+/** Enumerate finite single-target explanations from observations only. No hidden corpus is accepted. */
+export function inferRuleCandidates(observations: Transition[], options: RuleInferenceOptions = {}): RuleInferenceResult {
+  if (!Array.isArray(observations) || observations.length < 1 || observations.length > 256) throw Error('Transition limit');
+  dense(observations); observations.forEach(transition);
+  object(options); fields(options, [], ['constants', 'maxHypotheses', 'maxCandidates']);
+  const maxHypotheses = options.maxHypotheses ?? 2048;
+  const maxCandidates = options.maxCandidates ?? 16;
+  integer(maxHypotheses); integer(maxCandidates);
+  if (!Number.isInteger(maxHypotheses) || maxHypotheses < 1 || maxHypotheses > 4096 || !Number.isInteger(maxCandidates) || maxCandidates < 1 || maxCandidates > 16) throw Error('Inference budget limit');
+  const rawConstants = options.constants ?? [-4,-3,-2,-1,0,1,2,3,4];
+  if (!Array.isArray(rawConstants) || rawConstants.length < 1 || rawConstants.length > 17) throw Error('Constant limit');
+  dense(rawConstants); for (const n of rawConstants) { integer(n); if (Math.abs(n) > 1024) throw Error('Constant range'); }
+  const constants = [...new Set(rawConstants as number[])].sort((a,b)=>a-b);
+  const keys = Object.keys(observations[0]!.state).sort();
+  const result: RuleInferenceResult = { candidates: [], testedHypotheses: 0, compatibleHypotheses: 0, searchComplete: true };
+  const seen = new Set<string>();
+  const propose = (program: Operation[]): boolean => {
+    const digest = ruleHash(program); if (seen.has(digest)) return true;
+    if (result.testedHypotheses >= maxHypotheses) { result.searchComplete = false; return false; }
+    seen.add(digest); result.testedHypotheses++;
+    const describe = (op: Operation): string => op.op === 'copy' ? `Copy ${op.from} into ${op.key}` : op.op === 'addAction' ? `Add the action to ${op.key}` : `${op.op === 'set' ? 'Set' : op.op === 'add' ? 'Add to' : 'Multiply'} ${op.key} ${op.op === 'set' ? 'to' : 'by'} ${op.value}`;
+    const c: RuleCandidate = { schemaVersion: 1, candidateId: `inferred-${digest}`, rulebook: program.map(describe).join('; ') + '.', program };
+    // Stop at the first mismatch: search must not waste replay on a disproved hypothesis.
+    for (const t of observations) { try { if (ruleHash(executeRule(c,t.state,t.action)) !== ruleHash(t.nextState)) return true; } catch { return true; } }
+    result.compatibleHypotheses++;
+    if (result.candidates.length < maxCandidates) result.candidates.push(c);
+    else result.searchComplete = false;
+    return true;
+  };
+  for (const target of keys) {
+    if (!propose([{op:'addAction',key:target}])) return result;
+    for (const from of keys) if (!propose([{op:'copy',key:target,from}])) return result;
+    for (const op of ['add','multiply','set'] as const) for (const value of constants) if (!propose([{op,key:target,value}])) return result;
+    for (const multiplier of constants) for (const offset of constants) if (!propose([{op:'multiply',key:target,value:multiplier},{op:'add',key:target,value:offset}])) return result;
+  }
+  return result;
+}
