@@ -207,6 +207,36 @@ describe('validateConfig', () => {
   it('accepts a well-formed evaluatorEntrypoints value with no backticks', () => {
     expect(validateConfig({ ...metaharness, evaluatorEntrypoints: { bench: 'npm test' } }).ok).toBe(true);
   });
+  it.each([
+    'bench\n\n# INJECTED STEP\nReview-only test marker',
+    'bench\r# INJECTED STEP',
+    'bench\r\n# INJECTED STEP',
+    'bench`injected`',
+  ])('rejects a markdown-breaking evaluatorEntrypoints key (%j)', (key) => {
+    const config = { ...metaharness, evaluatorEntrypoints: { [key]: 'npm test' } };
+    const result = validateConfig(config);
+    expect(result.ok).toBe(false);
+    expect(result.errors).toContain(
+      `evaluatorEntrypoints key ${JSON.stringify(key)} must not contain a newline or a backtick (would corrupt the compiled prompt's markdown structure)`,
+    );
+    expect(() => compile(config)).toThrow(/evaluatorEntrypoints key .*must not contain a newline or a backtick/);
+  });
+  it('validates evaluatorEntrypoints keys even when their value is omitted from rendering', () => {
+    const config = {
+      ...metaharness,
+      evaluatorEntrypoints: { bench: 'npm test', ['bench\n# INJECTED STEP']: '' },
+    };
+    expect(validateConfig(config).ok).toBe(false);
+    expect(() => compile(config)).toThrow(/evaluatorEntrypoints key/);
+  });
+  it.each(['bench', 'flywheel', 'darwin', 'redblue', 'future-evaluator'])(
+    'preserves a safe evaluatorEntrypoints key (%s)',
+    (key) => {
+      const config = { ...metaharness, evaluatorEntrypoints: { [key]: 'npm test' } };
+      expect(validateConfig(config).ok).toBe(true);
+      expect(compile(config)).toContain(`- ${key}: \`npm test\``);
+    },
+  );
   it.each(['labels', 'competitors', 'extraDisciplines'] as const)(
     'rejects a fence-breaking %s entry',
     (field) => {

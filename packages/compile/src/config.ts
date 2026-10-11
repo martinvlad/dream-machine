@@ -243,10 +243,12 @@ export function validateConfig(config: Partial<DreamConfig>): ValidationResult {
   }
   // evaluatorEntrypoints has no type/shape validation on main yet (tracked
   // separately, open draft PR #152); guard defensively here regardless of
-  // that PR's fate -- any string value present must not break the
-  // backtick-wrapped entrypoint list in STEP 6-9.
+  // that PR's fate -- names are rendered as plain bullet prose, and string
+  // values as backtick-wrapped spans in STEP 6-9. Guard both sides of every
+  // entry, including unknown names, without changing #152's shape policy.
   if (config.evaluatorEntrypoints !== undefined && config.evaluatorEntrypoints !== null && typeof config.evaluatorEntrypoints === 'object' && !Array.isArray(config.evaluatorEntrypoints)) {
     for (const [key, v] of Object.entries(config.evaluatorEntrypoints)) {
+      checkNoFenceBreak(key, `evaluatorEntrypoints key ${JSON.stringify(key)}`, errors);
       if (typeof v === 'string') checkNoFenceBreak(v, `evaluatorEntrypoints.${key}`, errors);
     }
   }
