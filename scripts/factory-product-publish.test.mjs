@@ -47,15 +47,17 @@ for mode in ['nonzero','timeout','zero']:
         return {'dist':{'integrity':integrity}}
     def invoke(argv,**kwargs):
         assert 'NODE_AUTH_TOKEN' in kwargs['env'] and len(kwargs['env'])==6
-        assert kwargs['stdout']==subprocess.DEVNULL and kwargs['stderr']==subprocess.DEVNULL
+        assert kwargs['stdout']==subprocess.DEVNULL and kwargs['stderr']==subprocess.PIPE
         assert '--ignore-scripts' in argv
         assert 'secret-test-token' not in ' '.join(argv)
         config=open(kwargs['env']['NPM_CONFIG_USERCONFIG']).read()
         assert ('$' + '{NODE_AUTH_TOKEN}') in config and 'secret-test-token' not in config
         if mode=='timeout':raise subprocess.TimeoutExpired('npm',120)
-        return types.SimpleNamespace(returncode=1 if mode=='nonzero' else 0)
+        return types.SimpleNamespace(returncode=1 if mode=='nonzero' else 0, stderr=b'npm error code E403\nnpm error token secret-test-token\n')
     receipt=p.publish(policy,data,sha,version,query=query,invoke=invoke,sleep=lambda _:None,token_loader=lambda:'secret-test-token')
     assert receipt['status']=='VERIFIED',receipt
+    assert 'secret-test-token' not in json.dumps(receipt)
+    assert receipt['npmErrorCode']==(None if mode=='timeout' else 'E403')
 assert p.reconcile(policy['name'],version,integrity,query=lambda _:None,sleep=lambda _:None,attempts=2)=='UNCONFIRMED'
 assert p.reconcile(policy['name'],version,integrity,query=lambda _:{'dist':{'integrity':'wrong'}},sleep=lambda _:None)=='REGISTRY_CONFLICT'
 assert p.reconcile(policy['name'],version,integrity,query=lambda path: {'next':'other'} if path.endswith('dist-tags') else {'dist':{'integrity':integrity}},sleep=lambda _:None,attempts=2)=='UNCONFIRMED'
