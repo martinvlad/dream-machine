@@ -17,7 +17,8 @@
 </div>
 
 > Freeze the model. Evolve the harness. **Evaluation is not promotion** — the
-> machine never merges; a human does.
+> candidate worker never merges. An explicitly authorized factory coordinator may
+> merge independently reviewed changes after required checks pass.
 
 ```bash
 npx dream-machine init --repo owner/name --out dream.config.json
@@ -76,7 +77,11 @@ publication authority. Retain negative results and unchanged-input reuse.
 The isolated release workflow checks reviewed main ancestry, package version,
 all repository checks, dependency audit, exact tarball contents and installed CLI
 behavior. A separate job publishes the tested bytes through npm trusted publishing
-and verifies registry integrity. Prereleases use `next`; stable publication requires
+and verifies registry integrity. A separately authorized coordinator can merge
+verified factory changes and publish with the ruOS npm key through the bounded
+`ruos-npm-publish.py` adapter when OIDC is unavailable. The key stays on ruOS;
+this path records package integrity but does not claim OIDC provenance.
+Prereleases use `next`; stable publication requires
 an explicit manual release. It fails on errors instead of reporting a skipped
 publication as success. Required repository/environment protections and npm trust
 must be configured and verified before live releases.

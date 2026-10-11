@@ -12,7 +12,7 @@ test('strict limits and SSRF rejection',()=>{
 });
 test('bounded research records hash without invented dates',async()=>{
  const r=await collectResearch(config,{fetchImpl:async()=>new Response('{"title":"test"}',{headers:{'content-type':'application/json'}}),now:new Date('2026-10-11T00:00:00Z')});
- assert.equal(r.usable,true);assert.match(r.sources[0].contentHash,/^[a-f0-9]{64}$/);assert.equal(r.sources[0].publicationDate,null);assert.equal(r.sources[0].untrustedData,true);assert.match(compileFactory(config,r),/Never merge/);
+ assert.equal(r.usable,true);assert.match(r.sources[0].contentHash,/^[a-f0-9]{64}$/);assert.equal(r.sources[0].publicationDate,null);assert.equal(r.sources[0].untrustedData,true);assert.match(compileFactory(config,r),/Candidate workers never merge/);
 });
 test('network failure, truncation, malformed and oversized responses fail closed',async()=>{
  for(const fetchImpl of [async()=>{throw Error('secret error');},async()=>new Response('{}',{headers:{'content-type':'application/json','content-length':'100'}}),async()=>new Response('{',{headers:{'content-type':'application/json'}}),async()=>new Response('x'.repeat(262145),{headers:{'content-type':'text/plain'}}),async()=>new Response('',{headers:{'content-type':'text/plain'}})]) {

@@ -11,7 +11,7 @@ The factory is a bounded host agent workflow. The command line tools support res
 5. Run `node scripts/software-factory.mjs render INPUT.json --out DIR`. Review generated README, proposed ADR, animated SVG and gist text. Render output is a draft even when supplied results claim success.
 6. Run `node scripts/software-factory.mjs verify EVIDENCE.json factory.config.json`. Retain provenance and complete logs with secrets redacted. A passing structural gate cannot authenticate worker claims by itself.
 7. Open a draft PR containing the implementation, documentation and evidence. Before publishing a public gist, inspect its exact contents for credentials, private data, internal references and security findings. Report vulnerabilities privately under SECURITY.md.
-8. After human review and merge, use the separate trusted release workflow to publish an exact version from reviewed main. Verify the registry tarball and provenance. Never provide publication tokens to an implementation worker.
+8. After independent review and required checks, the owner-authorized coordinator may merge the exact head and use the separate trusted release workflow to publish an exact version from reviewed main. Verify the registry tarball and provenance. Never provide publication tokens to an implementation worker.
 
 ## Renderer input
 
@@ -66,4 +66,15 @@ permission leaves the draft available and never substitutes another account.
 Stable package publication requires manual workflow dispatch with `dry_run`
 false and a matching stable version tag. Pushing a prerelease version tag may
 publish to `next` after the configured environment review and all checks pass.
-No research or candidate worker may create release tags or modify this policy.
+No research or candidate worker may create release tags or modify this policy. The owner-authorized coordinator may perform exact-head merges and prerelease publication after independent review and required checks.
+
+## Authorized ruOS npm publishing
+
+Use `python3 scripts/ruos-npm-publish.py preflight` on the credential-owning desktop.
+The adapter returns identity metadata only. After exact artifact inspection and
+installed-package validation, run `publish TARBALL EXPECTED_SHA256 VERSION`.
+The adapter accepts only the Dream Machine prerelease package and publishes to
+`next` with lifecycle scripts disabled. NPM_TOKEN stays in memory on the owning
+desktop and no unrelated key enters the npm child. Never copy the binding or token
+to ChatGPT, another computer or GitHub secrets. Registry integrity is independently
+verified; this token route does not claim GitHub OIDC provenance.

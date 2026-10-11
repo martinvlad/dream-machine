@@ -16,7 +16,7 @@ Implement in a clean isolated worktree without publication credentials. Treat fe
 
 Generate README, proposed ADR, accessible animated SVG and a candidate gist report deterministically. Escape XML and Markdown data, restrict citation URLs, embed no scripts or external SVG resources and honor reduced motion preferences. Gist text requires a separate sanitization review before any public publication. Security findings follow SECURITY.md and must never be included in public gists.
 
-Only draft PRs are produced by the worker. Human review and branch protections govern merge. A separate trusted workflow publishes an exact version from reviewed main with package scope restrictions and provenance. Workers receive neither npm nor PyPI publication credentials. No automatic merge is introduced.
+Candidate workers produce draft PRs and receive neither merge nor npm/PyPI publication credentials. The owner explicitly authorized automatic factory merging and publication on 2026-10-11. The separate coordinator verifies independent review, exact head and all required checks before merging, without bypassing protections. It then publishes only the verified prerelease and related public gist. GitHub OIDC is preferred; the bounded ruOS token adapter is an authorized alternative with integrity verification but no OIDC provenance claim.
 
 ## Consequences
 
