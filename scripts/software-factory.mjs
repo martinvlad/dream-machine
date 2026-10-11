@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync, writeFileSync, mkdirSync, openSync, closeSync, fstatSync, constants, lstatSync, existsSync } from 'node:fs';
+import { realpathSync, readFileSync, writeFileSync, mkdirSync, openSync, closeSync, fstatSync, constants, lstatSync, existsSync } from 'node:fs';
 import { resolve, dirname, parse } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateConfig, collectResearch, compileFactory, assessEvidence } from './factory/core.mjs';
@@ -105,7 +105,7 @@ export async function main(args) {
   }
   throw new Error('Unknown command; use --help');
 }
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main(process.argv.slice(2)).then(code=>{process.exitCode=code;}).catch(()=>{
     // Never print input, provider error bodies or credential-bearing transport details.
     process.stderr.write('Factory command failed. Check arguments, input schema, output collision, identity or connectivity; use --help.\n'); process.exitCode=1;

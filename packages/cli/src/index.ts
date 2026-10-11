@@ -40,7 +40,7 @@ import {
   receiptExitCode,
 } from './ruos-evaluation.mjs';
 
-export const VERSION = '0.2.0-next.0';
+export const VERSION = '0.2.0-next.1';
 
 export interface IO {
   readFile(path: string): Promise<string>;

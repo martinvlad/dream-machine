@@ -71,9 +71,9 @@ async function main() {
     const hashes = inspect(readFileSync(path), version);
     const smoke = mkdtempSync(join(tmpdir(), 'dream-install-'));
     run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--prefix', smoke, path], smoke);
-    const reported = run('node', [join(smoke, 'node_modules/dream-machine/dist/bin.js'), 'version']);
+    const reported = run('node', [join(smoke, 'node_modules/.bin/dream-machine'), 'version']);
     if (reported !== version) throw Error(`CLI version mismatch: ${reported}`);
-    const help = run('node', [join(smoke, 'node_modules/dream-machine/dist/software-factory.mjs'), '--help']);
+    const help = run('node', [join(smoke, 'node_modules/.bin/dream-machine-factory'), '--help']);
     if (!help.includes('factory')) throw Error('Factory CLI smoke failed');
     const receipt = { name: pkg.name, version, tag, filename: packed[0].filename, ...hashes };
     writeFileSync(join(out, 'receipt.json'), JSON.stringify(receipt, null, 2));

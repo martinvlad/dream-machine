@@ -60,3 +60,12 @@ test('gist replay reuses exact prior publication without a POST',()=>{
  return JSON.stringify({owner:{login:'ruvnet'},public:true,id:'123abc',html_url:'https://gist.github.com/ruvnet/123abc',files:request.files});
  }});assert.equal(result.reused,true);assert.equal(mutations,0);
 });
+
+test('npm-style symlink invokes the factory command',()=>{
+ const link=join(dir(),'dream-machine-factory');
+ symlinkSync(new URL('./software-factory.mjs',import.meta.url),link);
+ const help=execFileSync(process.execPath,[link,'--help'],{encoding:'utf8'});
+ assert.match(help,/dream-machine-factory: evidence-gated/);
+ const invalid=spawnSync(process.execPath,[link,'unknown-command']);
+ assert.equal(invalid.status,1);
+});
