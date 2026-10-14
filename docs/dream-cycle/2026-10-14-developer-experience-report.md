@@ -49,9 +49,6 @@ different surface, not touched tonight).
 See Evaluation Receipt in the PR body (live repro against the actual built
 `packages/cli/dist/bin.js`, plus an added regression test).
 
-## Witness
-See Witness section below (filled after the report is final).
-
 ## 3 concrete next steps
 1. Audit every other CLI flag this codebase treats as string-required via
    truthiness (`!flag`) rather than `typeof flag !== 'string'` — this is the
@@ -69,17 +66,21 @@ See Witness section below (filled after the report is final).
 
 ## Witness
 
-- Session commit: `b2abcc14a632d7e0948962065a7c6c8920cf306c`
-- Report sha256 (`REPORT_HASH`): `ce1afc9e30451e22d012102275146597b4f7d93e3ee70d712bb0f011343eb964`
-- Witness stamp: `853aed2568fbf23492a536ddbf6f839e0dd617ceefc00545e0a5e745f9798f92`
+```
+report_sha256 : 4c4e85ad532e553be4820ce8494dacd6edf909f04356aaa0bfe32999fbf75c25
+session_commit: b2abcc14a632d7e0948962065a7c6c8920cf306c
+witness       : 4c8277be28712c3afe9f7ba90f4a02bfe8a8bcf7edfcd099cd5dc057728b5dfd
+```
 
-Verifier procedure (reproducible by anyone):
-1. Checkout `ruvnet/dream-machine` at commit `b2abcc14a632d7e0948962065a7c6c8920cf306c`.
-2. Obtain this report file as committed in the PR (same bytes as this gist).
-3. `REPORT_HASH=$(sha256sum <report-file> | awk '{print $1}')` — must equal
-   `ce1afc9e30451e22d012102275146597b4f7d93e3ee70d712bb0f011343eb964`.
-4. `printf '%s%s' "$REPORT_HASH" "b2abcc14a632d7e0948962065a7c6c8920cf306c" | sha256sum` — must equal
-   `853aed2568fbf23492a536ddbf6f839e0dd617ceefc00545e0a5e745f9798f92`.
-5. Independently reproduce the fix's effect: `git checkout b2abcc1 -- packages/cli/src/index.ts`, confirm
-   `node packages/cli/dist/bin.js verify-entrypoint redblue --cmd` prints a misleading `blocked` verdict
-   pre-fix, then apply the PR diff and confirm it prints the `usage:` error post-fix.
+Computed over this file's canonical bytes (everything above this heading,
+trailing whitespace collapsed to one newline) — reproducible from the
+committed file with no unavailable intermediate bytes. Verify:
+
+```bash
+dream-machine witness verify-report docs/dream-cycle/2026-10-14-developer-experience-report.md --commit b2abcc14a632d7e0948962065a7c6c8920cf306c
+```
+
+Independent reproduction of the underlying fix: `git checkout b2abcc1 -- packages/cli/src/index.ts`
+restores the pre-fix behavior, where `node packages/cli/dist/bin.js verify-entrypoint redblue --cmd`
+prints a misleading `blocked` verdict; applying this PR's diff on top restores the correct
+`usage:` error.
