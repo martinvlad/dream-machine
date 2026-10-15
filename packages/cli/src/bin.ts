@@ -58,8 +58,13 @@ const io: IO = {
   },
 };
 
-run(process.argv.slice(2), io).then((r) => {
-  if (r.out) process.stdout.write(r.out);
-  if (r.err) process.stderr.write(r.err);
+// Exit only once a stream has taken the text: process.exit() drops whatever a pipe has not
+// accepted yet, which on macOS cut piped output off at 64 KiB.
+const flush = (stream: NodeJS.WriteStream, text: string) =>
+  new Promise<void>((done) => (text ? stream.write(text, () => done()) : done()));
+
+run(process.argv.slice(2), io).then(async (r) => {
+  await flush(process.stdout, r.out);
+  await flush(process.stderr, r.err);
   process.exit(r.code);
 });
