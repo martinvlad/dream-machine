@@ -2,9 +2,10 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import { createHash, createPublicKey } from 'node:crypto';
+import { realpathSync } from 'node:fs';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir, cpus } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import ts from 'typescript';
@@ -164,7 +165,7 @@ export async function benchmarkTicketCodec({ full = false } = {}) {
   });
 }
 
-if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     assert(process.argv.length === 2 || (process.argv.length === 3 && process.argv[2] === '--full'), 'invalid arguments');
     process.stdout.write(`${JSON.stringify(await benchmarkTicketCodec({ full: process.argv[2] === '--full' }))}\n`);

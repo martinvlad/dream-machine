@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, writeFileSync, symlinkSync, existsSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, symlinkSync, existsSync, lstatSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { gistRequest, publishGist, digest } from './factory/gist.mjs';
@@ -18,10 +18,17 @@ test('render CLI generates complete hashed assets and refuses overwrite',()=>{
 });
 test('CLI refuses output symlink traversal and symlink input',()=>{
   const d=dir(),input=join(d,'input.json'),link=join(d,'alias');writeFileSync(input,JSON.stringify(fixture));symlinkSync(d,link);
-  assert.notEqual(spawnSync(process.execPath,['scripts/software-factory.mjs','render',input,'--out',join(link,'out')]).status,0);
+  const traversal=spawnSync(process.execPath,['scripts/software-factory.mjs','render',input,'--out',join(link,'out')],{encoding:'utf8'});
+  assert.notEqual(traversal.status,0);assert.match(traversal.stderr,/Output may not traverse symlinks/);
   assert.equal(existsSync(join(d,'out')),false);
   symlinkSync(input,join(d,'symlink.json'));
   assert.notEqual(spawnSync(process.execPath,['scripts/software-factory.mjs','render',join(d,'symlink.json'),'--out',join(d,'out')]).status,0);
+});
+const systemTmp=(()=>{try{const s=lstatSync('/tmp');return s.isSymbolicLink()&&s.uid===0&&process.getuid?.()!==0;}catch{return false;}})();
+test('CLI writes through a link the system owns, such as macOS /tmp',{skip:!systemTmp&&'/tmp is not a system-owned symlink here'},()=>{
+  const d=mkdtempSync('/tmp/factory-e2e-'),input=join(d,'input.json');writeFileSync(input,JSON.stringify(fixture));
+  const result=spawnSync(process.execPath,['scripts/software-factory.mjs','render',input,'--out',join(d,'out')],{encoding:'utf8'});
+  assert.equal(result.status,0,result.stderr);assert.equal(existsSync(join(d,'out','manifest.json')),true);
 });
 test('malformed candidate evidence exits nonzero and cannot authorize publishing',()=>{
   const d=dir(), input=join(d,'bad.json');writeFileSync(input,'{}');

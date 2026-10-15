@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Offline architecture gate. This is not a broker, MCP server, or MCU verifier. */
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';
@@ -428,7 +428,7 @@ export function checkAll(inputs = loadInputs()) {
     scope: 'offline architecture validation only; no runtime, cryptography, or hardware conformance claim' };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     console.log(JSON.stringify(checkAll(), null, 2));
   } catch (error) {

@@ -19,13 +19,15 @@ A scheduled host agent executes implementation and tests. These commands do not
 start an autonomous process, enforce provider billing, merge or publish npm.
 npm publication runs through the separate trusted release workflow.
 `;
+// Errors whose fixed wording is safe to print; anything else may carry input or transport details.
+class UsageError extends Error {}
 function read(path) {
   const fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
   try {
     const stat = fstatSync(fd);
-    if (!stat.isFile() || stat.size > 1024*1024) throw new Error('Input must be a regular file at most 1 MiB');
+    if (!stat.isFile() || stat.size > 1024*1024) throw new UsageError('Input must be a regular file at most 1 MiB');
     const buf = readFileSync(fd);
-    if (buf.length > 1024*1024) throw new Error('Input exceeds 1 MiB');
+    if (buf.length > 1024*1024) throw new UsageError('Input exceeds 1 MiB');
     return JSON.parse(buf.toString('utf8'));
   } finally { closeSync(fd); }
 }
@@ -34,7 +36,11 @@ function safeParents(path) {
   let current = parse(absolute).root;
   for (const part of absolute.slice(current.length).split('/').filter(Boolean)) {
     current = resolve(current, part);
-    if (existsSync(current) && lstatSync(current).isSymbolicLink()) throw new Error('Output may not traverse symlinks');
+    if (!existsSync(current)) continue;
+    const stat = lstatSync(current);
+    // Links the system owns, like macOS /tmp and /var, are part of the path; one anyone else made could
+    // redirect the write. Run as root, nothing is trusted, as before.
+    if (stat.isSymbolicLink() && (stat.uid !== 0 || process.getuid?.() === 0)) throw new UsageError('Output may not traverse symlinks');
   }
   return absolute;
 }
@@ -48,7 +54,7 @@ function getOptions(args) {
   for (let i=0;i<args.length;i++) {
     const value=args[i];
     if (value.startsWith('--')) {
-      if (!['--out','--research','--digest'].includes(value) || value in options || !args[i+1] || args[i+1].startsWith('--')) throw new Error('Invalid options');
+      if (!['--out','--research','--digest'].includes(value) || value in options || !args[i+1] || args[i+1].startsWith('--')) throw new UsageError('Invalid options');
       options[value] = args[++i];
     } else positional.push(value);
   }
@@ -58,7 +64,7 @@ export async function main(args) {
   if (!args.length || args[0] === '--help' || args[0] === 'help') { process.stdout.write(HELP); return 0; }
   const [command,...rest]=args, {positional:p,options:o}=getOptions(rest);
   const requireArgs = (n,required=[],allowed=required) => {
-    if (p.length!==n || required.some(k=>!o[k]) || Object.keys(o).some(k=>!allowed.includes(k))) throw new Error('Incorrect arguments; use --help');
+    if (p.length!==n || required.some(k=>!o[k]) || Object.keys(o).some(k=>!allowed.includes(k))) throw new UsageError('Incorrect arguments; use --help');
   };
   if (command==='research') {
     requireArgs(1,['--out']);
@@ -103,11 +109,13 @@ export async function main(args) {
     const request=read(p[0]);
     process.stdout.write(JSON.stringify(publishGist(request,o['--digest']))+'\n'); return 0;
   }
-  throw new Error('Unknown command; use --help');
+  throw new UsageError('Unknown command; use --help');
 }
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main(process.argv.slice(2)).then(code=>{process.exitCode=code;}).catch(()=>{
+  main(process.argv.slice(2)).then(code=>{process.exitCode=code;}).catch(error=>{
     // Never print input, provider error bodies or credential-bearing transport details.
-    process.stderr.write('Factory command failed. Check arguments, input schema, output collision, identity or connectivity; use --help.\n'); process.exitCode=1;
+    if (error instanceof UsageError) process.stderr.write(`Factory command failed: ${error.message}\n`);
+    else process.stderr.write('Factory command failed. Check arguments, input schema, output collision, identity or connectivity; use --help.\n');
+    process.exitCode=1;
   });
 }

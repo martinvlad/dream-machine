@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import {createHash} from 'node:crypto';
 import {readFile, mkdir, writeFile} from 'node:fs/promises';
-import {pathToFileURL} from 'node:url';
+import {realpathSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 const digest=s=>createHash('sha256').update(s).digest('hex');
 export const ENDPOINTS=Object.freeze({hn:'https://hacker-news.firebaseio.com/v0/topstories.json',papers:'https://huggingface.co/api/daily_papers',arxiv:'https://export.arxiv.org/api/query?search_query=all%3Asoftware%20agents&start=0&max_results=5&sortBy=submittedDate&sortOrder=descending',ruflo:'https://api.github.com/repos/ruvnet/ruflo/releases?per_page=5',metaharness:'https://api.github.com/repos/ruvnet/metaharness/releases?per_page=5',autogenous:'https://api.github.com/repos/ruvnet/autogenous/releases?per_page=5',producthunt:'https://www.producthunt.com/feed'});
@@ -67,4 +68,4 @@ export function rankCandidates(discovery){
  return Object.freeze({...plan,planDigest:digest(JSON.stringify(plan))});
 }
 async function main(){const [command,file,flag,out,...extra]=process.argv.slice(2);if(command!=='run'||!file||flag!=='--out'||!out||extra.length)throw Error('Usage: node scripts/factory-discovery.mjs run factory.portfolio.json --out DIRECTORY');const c=validatePortfolio(JSON.parse(await readFile(file,'utf8'))),d=await collectDiscovery(c),plan=rankCandidates(d);await mkdir(out,{recursive:true});await writeFile(resolve(out,'discovery.json'),JSON.stringify(d,null,2)+'\n');await writeFile(resolve(out,'candidate-plan.json'),JSON.stringify(plan,null,2)+'\n');console.log(JSON.stringify({sourcesOk:d.records.filter(r=>r.status==='ok').length,selected:plan.selected,planDigest:plan.planDigest}));}
-if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href)main().catch(e=>{console.error(e.message);process.exitCode=1;});
+if(process.argv[1]&&realpathSync(process.argv[1])===fileURLToPath(import.meta.url))main().catch(e=>{console.error(e.message);process.exitCode=1;});

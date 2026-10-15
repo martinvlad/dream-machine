@@ -2,8 +2,8 @@
  * Source-tree compatibility entry point. The implementation is shared with
  * the packaged `dream-machine ruos verify` command so policy cannot drift.
  */
-import { readFileSync, openSync, fstatSync, closeSync, constants } from 'node:fs';
-import { pathToFileURL } from 'node:url';
+import { readFileSync, openSync, fstatSync, closeSync, constants, realpathSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import {
   digest,
   evaluateDocuments,
@@ -28,7 +28,7 @@ function readEvidence(path) {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   let receipt;
   try {
     if (process.argv.length !== 4) throw new Error('INVALID_INPUT');
